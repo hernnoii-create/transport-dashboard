@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Transport Dashboard - ร้านตั้งเจริญพาณิชย์</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{--bg:#0b1630;--panel:#111f3f;--panel2:#16284f;--line:#22365f;--txt:#e6ecff;--mut:#8ea0c9;--acc:#3b82f6}
+*{box-sizing:border-box}body{margin:0;font-family:Sarabun,'Loma','Garuda',sans-serif;background:var(--bg);color:var(--txt);font-size:14px}
+.app{display:flex;min-height:100vh}
+aside{width:230px;background:#091228;border-right:1px solid var(--line);padding:18px 12px;flex-shrink:0;position:sticky;top:0;height:100vh}
+.brand{display:flex;gap:10px;align-items:center;margin-bottom:22px;padding:0 6px}.logo{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#3b82f6,#06b6d4);display:grid;place-items:center;font-size:20px}
+.brand b{display:block;font-size:15px}.brand small{color:var(--mut);font-size:11px}
+.nav a{display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:8px;color:var(--mut);cursor:pointer;margin-bottom:3px;text-decoration:none}
+.nav a:hover{background:var(--panel)}.nav a.active{background:var(--acc);color:#fff}
+main{flex:1;padding:18px 22px;min-width:0}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.top h1{margin:0;font-size:22px}.top p{margin:2px 0 0;color:var(--mut);font-size:12px}
+.tools{display:flex;gap:10px;align-items:center}.date{background:var(--panel);border:1px solid var(--line);padding:8px 12px;border-radius:8px;color:var(--txt)}
+.bell{position:relative;background:var(--panel);border:1px solid var(--line);width:38px;height:38px;border-radius:8px;display:grid;place-items:center;font-size:17px}
+.bell i{position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;font-style:normal;font-size:10px;border-radius:9px;padding:1px 5px}
+.avatar{width:38px;height:38px;border-radius:50%;background:#334a7d;display:grid;place-items:center}
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:14px}
+.kpi{border-radius:12px;padding:14px;color:#fff;position:relative;overflow:hidden}
+.kpi .ic{position:absolute;right:10px;top:10px;font-size:24px;opacity:.85}.kpi small{opacity:.9}.kpi .v{font-size:22px;font-weight:700;margin:6px 0 2px}.kpi .d{font-size:11px;opacity:.95}
+.grid{display:grid;grid-template-columns:1.6fr 1.2fr .9fr;gap:14px;margin-bottom:14px}
+.grid2{display:grid;grid-template-columns:.9fr 1.9fr;gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;min-width:0}
+.card h3{margin:0 0 10px;font-size:15px;display:flex;justify-content:space-between}.card h3 span{color:var(--mut);font-weight:400;font-size:12px}
+#map{height:280px;border-radius:8px}.chartbox{height:280px;position:relative}
+.sum div{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px dashed var(--line)}.sum div:last-child{border:0}.sum span{color:var(--mut)}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);white-space:nowrap}th{color:var(--mut);font-weight:600;font-size:12px}
+.tw{overflow-x:auto}
+.b{padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600}
+.b-done{background:#14532d;color:#4ade80}.b-run{background:#1e3a8a;color:#93c5fd}.b-wait{background:#713f12;color:#fcd34d}.b-load{background:#4c1d95;color:#c4b5fd}.b-cancel{background:#7f1d1d;color:#fca5a5}
+.view{display:none}.view.show{display:block}
+.leaflet-container{background:#0b1630}
+@media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}.grid{grid-template-columns:1fr 1fr}.grid .card:first-child{grid-column:1/-1}.grid2{grid-template-columns:1fr}}
+@media(max-width:760px){.app{flex-direction:column}aside{width:100%;height:auto;position:static}.nav{display:flex;overflow-x:auto}.nav a{white-space:nowrap}.kpis{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}}
+</style></head><body>
+<div class="app">
+<aside><div class="brand"><div class="logo">🚚</div><div><b>ตั้งเจริญพาณิชย์</b><small>วัสดุก่อสร้าง · แก้งคร้อ</small></div></div><nav class="nav" id="nav"></nav></aside>
+<main>
+<div class="top"><div><h1 id="title">ภาพรวม</h1><p>ร้านตั้งเจริญพาณิชย์ วัสดุก่อสร้าง อ.แก้งคร้อ จ.ชัยภูมิ</p></div>
+<div class="tools"><div class="date">📅 <span id="range"></span></div><div class="bell">🔔<i>3</i></div><div class="avatar">👤</div></div></div>
+<section class="view show" id="v-overview">
+<div class="kpis" id="kpis"></div>
+<div class="grid">
+<div class="card"><h3>แผนที่เส้นทางจัดส่ง <span>วันนี้</span></h3><div id="map"></div></div>
+<div class="card"><h3>จำนวนเที่ยววิ่งต่อวัน <span>14 วันล่าสุด</span></h3><div class="chartbox"><canvas id="lineChart"></canvas></div></div>
+<div class="card"><h3>สรุปประจำวัน <span id="today"></span></h3><div class="sum" id="summary"></div></div>
+</div>
+<div class="grid2">
+<div class="card"><h3>สถานะงานประจำเดือน</h3><div class="chartbox" style="height:260px"><canvas id="donut"></canvas></div></div>
+<div class="card"><h3>เที่ยววิ่งวันนี้ <span>อัปเดตล่าสุด 09:45 น.</span></h3><div class="tw"><table id="tripTable"></table></div></div>
+</div></section>
+<section class="view" id="v-other"><div class="card"><h3 id="otherTitle"></h3><div class="tw"><table id="otherTable"></table></div></div></section>
+</main></div>
+<script>
+/* ===================== SAMPLE DATA (แทนที่ด้วยข้อมูลจริงได้) ===================== */
+const SHOP = {name:'ร้านตั้งเจริญพาณิชย์', lat:15.9306, lng:101.8467};
+const DATE_RANGE = '1 ต.ค. 2569 – 15 ต.ค. 2569';
+const KPIS = [
+ {label:'จำนวนงานจัดส่ง',value:'186',change:12.4,icon:'📦',color:'linear-gradient(135deg,#2563eb,#3b82f6)'},
+ {label:'ส่งสำเร็จ',value:'172',change:9.8,icon:'✅',color:'linear-gradient(135deg,#059669,#10b981)'},
+ {label:'รถวิ่งอยู่',value:'5 / 7',change:0,icon:'🚛',color:'linear-gradient(135deg,#7c3aed,#a855f7)'},
+ {label:'รายได้รวม ฿',value:'฿842,500',change:15.2,icon:'💰',color:'linear-gradient(135deg,#d97706,#f59e0b)'},
+ {label:'ค่าใช้จ่ายขนส่ง ฿',value:'฿96,320',change:-4.1,icon:'⛽',color:'linear-gradient(135deg,#dc2626,#f43f5e)'},
+ {label:'ต้นทุนต่อเที่ยว ฿',value:'฿518',change:-6.3,icon:'📉',color:'linear-gradient(135deg,#0891b2,#06b6d4)'}];
+const LOCATIONS = [
+ {name:'บ้านหนองไผ่',lat:15.965,lng:101.880},{name:'บ้านโนนสะอาด',lat:15.890,lng:101.800},
+ {name:'บ้านหัวทะเล',lat:15.990,lng:101.790},{name:'บ้านหนองขาม',lat:15.870,lng:101.905},
+ {name:'อ.เมืองชัยภูมิ',lat:15.8068,lng:102.0316},{name:'อ.ภูเขียว',lat:16.3740,lng:102.1290},
+ {name:'บ้านท่ามะไฟหวาน',lat:15.945,lng:101.720}];
+const TRIPS_PER_DAY = {labels:['2','3','4','5','6','7','8','9','10','11','12','13','14','15 ต.ค.'],trips:[11,13,9,15,14,8,12,16,14,17,10,13,15,7],delivered:[10,12,9,14,13,8,11,15,13,16,10,12,14,4]};
+const DAILY_SUMMARY = [['งานทั้งหมดวันนี้','14 งาน'],['ส่งสำเร็จ','4 งาน'],['กำลังจัดส่ง','5 งาน'],['รอขึ้นของ','3 งาน'],['ระยะทางรวม','286 กม.'],['น้ำมันที่ใช้','62 ลิตร'],['รายได้วันนี้','฿58,400']];
+const MONTH_STATUS = {labels:['ส่งสำเร็จ','กำลังจัดส่ง','รอดำเนินการ','ยกเลิก'],data:[172,5,6,3],colors:['#10b981','#3b82f6','#f59e0b','#ef4444']};
+const STATUS = {done:['ส่งสำเร็จ','b-done'],run:['กำลังจัดส่ง','b-run'],wait:['รอขึ้นของ','b-wait'],load:['กำลังขึ้นของ','b-load'],cancel:['ยกเลิก','b-cancel']};
+const TODAY_TRIPS = [
+ {plate:'82-4517 ชย',driver:'สมชาย ใจดี',to:'บ้านหนองไผ่',goods:'ปูนซีเมนต์ 50 ถุง',status:'done'},
+ {plate:'83-1209 ชย',driver:'ประเสริฐ แก้วกล้า',to:'อ.เมืองชัยภูมิ',goods:'เหล็กเส้น 12 มม. 120 เส้น',status:'run'},
+ {plate:'บล-6631 ชย',driver:'วิชัย ศรีสุข',to:'บ้านโนนสะอาด',goods:'อิฐบล็อก 1,500 ก้อน',status:'run'},
+ {plate:'82-9904 ชย',driver:'บุญมี พรมมา',to:'บ้านหัวทะเล',goods:'ทรายหยาบ 6 คิว',status:'load'},
+ {plate:'83-5521 ชย',driver:'อนุชา ทองดี',to:'อ.ภูเขียว',goods:'ปูนซีเมนต์ 80 ถุง + เหล็กเส้น',status:'run'},
+ {plate:'บต-2280 ชย',driver:'สมพร คำภา',to:'บ้านหนองขาม',goods:'หินคลุก 5 คิว',status:'wait'},
+ {plate:'82-7713 ชย',driver:'ธนากร บุญเรือง',to:'บ้านท่ามะไฟหวาน',goods:'กระเบื้องหลังคา 300 แผ่น',status:'cancel'}];
+const VEHICLES = [['82-4517 ชย','6 ล้อ','8 ตัน','พร้อมใช้งาน'],['83-1209 ชย','10 ล้อ','15 ตัน','กำลังวิ่ง'],['บล-6631 ชย','6 ล้อ','8 ตัน','กำลังวิ่ง'],['82-9904 ชย','ดั๊มพ์ 6 ล้อ','6 คิว','ขึ้นของ'],['83-5521 ชย','10 ล้อ','15 ตัน','กำลังวิ่ง'],['บต-2280 ชย','กระบะ 4 ล้อ','1.5 ตัน','ซ่อมบำรุง'],['82-7713 ชย','6 ล้อ','8 ตัน','พร้อมใช้งาน']];
+const DRIVERS = [['สมชาย ใจดี','081-234-5678','82-4517 ชย','42'],['ประเสริฐ แก้วกล้า','089-111-2233','83-1209 ชย','38'],['วิชัย ศรีสุข','086-555-0101','บล-6631 ชย','35'],['บุญมี พรมมา','092-777-8899','82-9904 ชย','29'],['อนุชา ทองดี','084-321-6547','83-5521 ชย','33'],['สมพร คำภา','061-998-1122','บต-2280 ชย','21']];
+const CUSTOMERS = [['หจก.ชัยภูมิก่อสร้าง','อ.เมืองชัยภูมิ','24','฿212,000'],['คุณสมศักดิ์ (สร้างบ้าน)','บ้านหนองไผ่','6','฿48,500'],['อบต.หนองขาม','บ้านหนองขาม','4','฿96,000'],['ร้านวัสดุภูเขียว','อ.ภูเขียว','11','฿134,200'],['คุณมาลี (ต่อเติม)','บ้านโนนสะอาด','3','฿18,900']];
+const FINANCE = [['ค่าขนส่งเรียกเก็บ','รายได้','฿124,000'],['ขายสินค้า (ส่งถึงที่)','รายได้','฿718,500'],['น้ำมันเชื้อเพลิง','ค่าใช้จ่าย','฿61,200'],['ค่าแรงพนักงานขับ','ค่าใช้จ่าย','฿24,000'],['ซ่อมบำรุงรถ','ค่าใช้จ่าย','฿8,620'],['ค่าทางด่วน/อื่นๆ','ค่าใช้จ่าย','฿2,500']];
+const REPORTS = [['รายงานงานจัดส่งรายเดือน','ต.ค. 2569','PDF'],['รายงานต้นทุนต่อเที่ยว','ต.ค. 2569','Excel'],['รายงานน้ำมันรายคัน','ก.ย. 2569','PDF']];
+const SETTINGS = [['ชื่อร้าน','ร้านตั้งเจริญพาณิชย์ วัสดุก่อสร้าง'],['ที่อยู่','อ.แก้งคร้อ จ.ชัยภูมิ 36150'],['อัตราค่าส่งเริ่มต้น','฿300 / เที่ยว (ในรัศมี 10 กม.)'],['ค่าส่งเพิ่ม','฿15 / กม.']];
+/* ================================================================================ */
+const MENU=[['overview','📊','ภาพรวม'],['jobs','📦','งานจัดส่ง'],['trips','🛣️','เที่ยววิ่ง'],['vehicles','🚛','รถและพาหนะ'],['drivers','👷','พนักงานขับรถ'],['customers','🏠','ลูกค้า'],['finance','💵','รายได้และค่าใช้จ่าย'],['reports','📑','รายงาน'],['settings','⚙️','ตั้งค่า']];
+const badge=s=>`<span class="b ${STATUS[s][1]}">${STATUS[s][0]}</span>`;
+const tbl=(h,rows)=>`<thead><tr>${h.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody>`;
+const tripRows=TODAY_TRIPS.map(t=>[t.plate,t.driver,'แก้งคร้อ → '+t.to,t.goods,badge(t.status)]);
+const OTHER={jobs:[['ทะเบียนรถ','พนักงานขับ','ปลายทาง','สินค้า','สถานะ'],TODAY_TRIPS.map(t=>[t.plate,t.driver,t.to,t.goods,badge(t.status)])],
+ trips:[['ทะเบียนรถ','พนักงานขับ','เส้นทาง','สินค้า','สถานะ'],tripRows],
+ vehicles:[['ทะเบียน','ประเภท','บรรทุก','สถานะ'],VEHICLES],drivers:[['ชื่อ','โทร','รถประจำ','เที่ยว/เดือน'],DRIVERS],
+ customers:[['ลูกค้า','พื้นที่','จำนวนงาน','ยอดซื้อ'],CUSTOMERS],finance:[['รายการ','ประเภท','จำนวนเงิน'],FINANCE],
+ reports:[['รายงาน','งวด','รูปแบบ'],REPORTS],settings:[['หัวข้อ','ค่า'],SETTINGS]};
+document.getElementById('range').textContent=DATE_RANGE;
+document.getElementById('today').textContent='15 ต.ค. 2569';
+document.getElementById('nav').innerHTML=MENU.map(([k,i,t],n)=>`<a data-k="${k}" class="${n?'':'active'}">${i} ${t}</a>`).join('');
+document.getElementById('kpis').innerHTML=KPIS.map(k=>`<div class="kpi" style="background:${k.color}"><div class="ic">${k.icon}</div><small>${k.label}</small><div class="v">${k.value}</div><div class="d">${k.change>0?'▲':k.change<0?'▼':'●'} ${Math.abs(k.change)}% จากเดือนที่แล้ว</div></div>`).join('');
+document.getElementById('summary').innerHTML=DAILY_SUMMARY.map(([a,b])=>`<div><span>${a}</span><b>${b}</b></div>`).join('');
+document.getElementById('tripTable').innerHTML=tbl(['ทะเบียนรถ','พนักงานขับ','เส้นทาง','สินค้า','สถานะ'],tripRows);
+document.getElementById('nav').addEventListener('click',e=>{const a=e.target.closest('a');if(!a)return;
+ document.querySelectorAll('.nav a').forEach(x=>x.classList.toggle('active',x===a));
+ const k=a.dataset.k,t=MENU.find(m=>m[0]===k)[2];document.getElementById('title').textContent=t;
+ document.getElementById('v-overview').classList.toggle('show',k==='overview');document.getElementById('v-other').classList.toggle('show',k!=='overview');
+ if(k==='overview'){map&&map.invalidateSize();return}
+ document.getElementById('otherTitle').textContent=t+' (ข้อมูลตัวอย่าง)';document.getElementById('otherTable').innerHTML=tbl(...OTHER[k]);});
+let map;
+if(window.L){map=L.map('map',{zoomControl:true}).setView([SHOP.lat,SHOP.lng],10);
+ L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',{attribution:'Tiles &copy; Esri',maxZoom:16}).addTo(map);
+ L.circleMarker([SHOP.lat,SHOP.lng],{radius:9,color:'#fff',fillColor:'#f59e0b',fillOpacity:1,weight:2}).addTo(map).bindPopup(SHOP.name);
+ const col={done:'#10b981',run:'#3b82f6',wait:'#f59e0b',load:'#a855f7',cancel:'#ef4444'};const pts=[[SHOP.lat,SHOP.lng]];
+ LOCATIONS.forEach(l=>{const t=TODAY_TRIPS.find(x=>x.to===l.name);const c=t?col[t.status]:'#94a3b8';pts.push([l.lat,l.lng]);
+  L.polyline([[SHOP.lat,SHOP.lng],[l.lat,l.lng]],{color:c,weight:2,opacity:.7,dashArray:'5 5'}).addTo(map);
+  L.circleMarker([l.lat,l.lng],{radius:6,color:c,fillColor:c,fillOpacity:.9}).addTo(map).bindPopup(l.name+(t?'<br>'+t.goods:''));});
+ map.fitBounds(pts,{padding:[20,20]});}
+if(window.Chart){Chart.defaults.color='#8ea0c9';Chart.defaults.font.family='Sarabun, Loma, sans-serif';Chart.defaults.borderColor='#22365f';
+ new Chart(lineChart,{type:'line',data:{labels:TRIPS_PER_DAY.labels,datasets:[{label:'เที่ยววิ่ง',data:TRIPS_PER_DAY.trips,borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.18)',fill:true,tension:.35},{label:'ส่งสำเร็จ',data:TRIPS_PER_DAY.delivered,borderColor:'#10b981',tension:.35}]},options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}});
+ new Chart(donut,{type:'doughnut',data:{labels:MONTH_STATUS.labels,datasets:[{data:MONTH_STATUS.data,backgroundColor:MONTH_STATUS.colors,borderWidth:0}]},options:{maintainAspectRatio:false,cutout:'65%',plugins:{legend:{position:'bottom'}}}});}
+</script></body></html>
